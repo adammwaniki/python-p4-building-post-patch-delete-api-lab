@@ -23,12 +23,34 @@ def bakeries():
     bakeries = [bakery.to_dict() for bakery in Bakery.query.all()]
     return make_response(  bakeries,   200  )
 
-@app.route('/bakeries/<int:id>')
+@app.route('/bakeries/<int:id>', methods=['GET', 'PATCH'])
 def bakery_by_id(id):
+    if request.method == 'GET':
+        bakery = Bakery.query.filter_by(id=id).first()
+        bakery_serialized = bakery.to_dict()
+        return make_response ( bakery_serialized, 200  )
+        
+    
+    elif request.method == 'PATCH':
+        bakery = Bakery.query.filter_by(id=id).first()
+        # Handling cases where the value may be none
+        if bakery is None:
+            return make_response(jsonify({"error": "Bakery not found"}), 404)
+        
+        if 'name' in request.form:
+            bakery.name = request.form['name']
 
-    bakery = Bakery.query.filter_by(id=id).first()
-    bakery_serialized = bakery.to_dict()
-    return make_response ( bakery_serialized, 200  )
+        db.session.add(bakery)
+        db.session.commit()
+
+        bakery_dict = bakery.to_dict()
+
+        response = make_response(
+            bakery_dict,
+            200
+        )
+        return response
+
 
 @app.route('/baked_goods', methods=['GET', 'POST'])
 def baked_goods():
@@ -56,6 +78,34 @@ def baked_goods():
 
         return response
 
+@app.route('/baked_goods/<int:id>', methods=['GET', 'DELETE'])
+def baked_good(id):
+    # The code is cleaner when i place this attribute here because i can just call it
+    baked_good = BakedGood.query.filter_by(id=id).first()
+
+    if request.method == 'GET':
+        
+        if baked_good is None:
+            return make_response(jsonify({"error": "Baked good not found"}), 404)
+        baked_good_dict = baked_good.to_dict()
+
+        return make_response(baked_good_dict, 200)
+    
+    elif request.method == 'DELETE':
+        db.session.delete(baked_good)
+        db.session.commit()
+
+        response_body = {
+            "delete_successful": True,
+            "message": "Baked good deleted."
+        }
+
+        response = make_response(
+            response_body,
+            200
+        )
+
+        return response
 
 @app.route('/baked_goods/by_price')
 def baked_goods_by_price():
